@@ -1,18 +1,19 @@
 import numpy as np
 import torch
+import math
 import torch.utils.data as data
 import torchvision
 import torchvision.transforms as transforms
 from PIL import Image
 from itertools import product,permutations
-from random import sample, random
+from random import sample, random,randint
 from scipy.spatial import distance
 
 #jigsaw_permutations has the top scrumbles parts-> labels = position +1
 
 def calculate_possible_permutations():
-    vec = [1,2,3,4,5,6,7,8,9]
-    top_30 = [[]]
+    vec = [0,1,2,3,4,5,6,7,8]
+    top_30 = []
     top_30_humming = np.zeros(30)
     res = list(permutations(vec))
     for v in res:
@@ -21,10 +22,10 @@ def calculate_possible_permutations():
         for i in range(0,30):
             if dist > top_30_humming[i]:
                 top_30_humming[i]=dist
-                top_30[i]=v
+                top_30.insert(i,v)
     #now i have top 30 permutations saved 
     global jigsaw_permutations
-    jigsaw_permutations = top_30_humming
+    jigsaw_permutations = top_30
         
         
 
@@ -61,22 +62,24 @@ def prepare_jigsaw_data(names,percent,path):
         #transform????
         width, height = img.size
         #i want 3x3 grid
-        piece_size = width / 3;
-        width_steps = range(0, width, piece_size)
-        height_steps = range(0, height, piece_size)
-        boxes = ((i, j, i+piece_size, j+piece_size)
+
+        piece_size_w = int(math.ceil(width / 3))
+	piece_size_h = int(math.ceil(height / 3))
+        width_steps = range(0, width, piece_size_w)
+        height_steps = range(0, height, piece_size_h)
+        boxes = ((i, j, i+piece_size_w, j+piece_size_h)
                  for i, j in product(width_steps, height_steps))
         parts = [img.crop(box) for box in boxes]
         #lets get one of the permutations
-        perms = random.randint(0, 29)
-        numbers = jigsaw_permutations[perms];
+        perms = randint(0, 29)
+        numbers = jigsaw_permutations[perms]
         permutations_jigsaw.append(numbers)
         labels_jigsaw.append(perms+1)
         #recompose the new image
-        img_recomposed = Image.new('RGB',img.size);
+        img_recomposed = Image.new('RGB',img.size)
         pi = 0
-        for i in range(0,width,piece_size):
-            for j in range(0,height,piece_size):
+        for i in range(0,width,piece_size_w):
+            for j in range(0,height,piece_size_h):
                 index1 = numbers[pi]
                 img_recomposed.paste(parts[index1],(i,j))
                 pi=pi+1

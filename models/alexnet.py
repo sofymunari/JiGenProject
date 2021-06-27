@@ -37,10 +37,12 @@ class AlexNet(nn.Module):
             ("drop7", nn.Dropout() if dropout else Id())]))
 
         self.class_classifier = nn.Linear(4096, n_classes)
+	self.jigsaw_classifier = nn.Linear(4096, 31)
 
     def get_params(self, base_lr):
         return [{"params": self.features.parameters(), "lr": 0.},
-                {"params": chain(self.classifier.parameters(), self.class_classifier.parameters()), "lr": base_lr}]
+                {"params": chain(self.classifier.parameters(), self.class_classifier.parameters()), "lr": base_lr},
+		{"params": chain(self.classifier.parameters(), self.jigsaw_classifier.parameters()), "lr": base_lr}]
 
     def forward(self, x, lambda_val=0):
 
@@ -55,7 +57,7 @@ class AlexNet(nn.Module):
         x = self.features(x*57.6)
         x = x.view(x.size(0), -1)
         x = self.classifier(x)
-        return self.class_classifier(x)
+        return self.class_classifier(x), self.jigsaw_classifier(x)
 
 def alexnet(classes):
     model = AlexNet(classes)
@@ -64,7 +66,7 @@ def alexnet(classes):
             nn.init.xavier_uniform_(m.weight, .1)
             nn.init.constant_(m.bias, 0.)
 
-    state_dict = torch.load("./models/pretrained/alexnet_caffe.pth.tar")
+    state_dict = torch.load(".JiGenProject/models/pretrained/alexnet_caffe.pth.tar")
 
     del state_dict["classifier.fc8.weight"]
     del state_dict["classifier.fc8.bias"]

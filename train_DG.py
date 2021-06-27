@@ -106,19 +106,22 @@ class Trainer:
         with torch.no_grad():
             for phase, loader in self.test_loaders.items():
                 total = len(loader.dataset)
-                class_correct = self.do_test(loader)
+                class_correct,jigsaw_correct = self.do_test(loader)
                 class_acc = float(class_correct) / total
-                self.logger.log_test(phase, {"Classification Accuracy": class_acc})
+                jigsaw_acc = float(jigsaw_correct) / total
+                self.logger.log_test(phase, {"Classification Accuracy": class_acc,"Jigsaw Accuracy":jigsaw_acc})
                 self.results[phase][self.current_epoch] = class_acc
 
     def do_test(self, loader):
         class_correct = 0
-        for it, (data, class_l) in enumerate(loader):
-            data, class_l = data.to(self.device), class_l.to(self.device)
-            class_logit = self.model(data)
+        for it, (data, class_l, jigsaw_l) in enumerate(loader):
+            data, class_l,jigsaw_l = data.to(self.device), class_l.to(self.device),jigsaw_l.to(self.device)
+            class_logit,jigsaw_logit = self.model(data)
+            _, jigsaw_pred = jigsaw_logit.max(dim=1)
             _, cls_pred = class_logit.max(dim=1)
+	    jigsaw_correct += torch.sum(jigsaw_pred == jigsaw_l.data)
             class_correct += torch.sum(cls_pred == class_l.data)
-        return class_correct
+        return class_correct,jigsaw_correct
 
     def do_training(self):
         self.logger = Logger(self.args, update_frequency=30)
