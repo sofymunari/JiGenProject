@@ -96,8 +96,8 @@ class Trainer:
 
 
             self.logger.log(it, len(self.source_loader),
-                            {"Class Loss ": class_loss.item()},
-                            {"Class Accuracy ": torch.sum(cls_pred == class_l.data).item()},
+                            {"Class Loss ": class_loss.item(), "Jigsaw Loss": jigsaw_loss.item()},
+                            {"Class Accuracy ": torch.sum(cls_pred == class_l.data).item(),"Jigsaw Accuracy ": torch.sum(jigsaw_pred == jigsaw_l.data).item()},
                             data.shape[0])
             del loss, class_loss, jigsaw_loss, jigsaw_logit, class_logit
 
