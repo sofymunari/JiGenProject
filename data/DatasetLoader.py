@@ -12,7 +12,7 @@ from scipy.spatial import distance
 
 def calculate_possible_permutations():
     vec = [1,2,3,4,5,6,7,8,9]
-    top_30 = []
+    top_30 = [[]]
     top_30_humming = np.zeros(30)
     res = list(permutations(vec))
     for v in res:
