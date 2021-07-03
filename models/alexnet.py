@@ -8,7 +8,7 @@ from torch import nn as nn
 
 
 class AlexNet(nn.Module):
-    def __init__(self, n_classes=100, dropout=True):
+    def __init__(self,n_classes=100, jigsaw_classes=31 , dropout=True):
         super(AlexNet, self).__init__()
         print("Using  AlexNet")
         self.features = nn.Sequential(OrderedDict([
@@ -37,12 +37,12 @@ class AlexNet(nn.Module):
             ("drop7", nn.Dropout() if dropout else Id())]))
 
         self.class_classifier = nn.Linear(4096, n_classes)
-	self.jigsaw_classifier = nn.Linear(4096, 31)
+        self.jigsaw_classifier = nn.Linear(4096, jigsaw_classes)
 
     def get_params(self, base_lr):
         return [{"params": self.features.parameters(), "lr": 0.},
-                {"params": chain(self.classifier.parameters(), self.class_classifier.parameters()), "lr": base_lr},
-		{"params": chain(self.classifier.parameters(), self.jigsaw_classifier.parameters()), "lr": base_lr}]
+                {"params": chain(self.classifier.parameters(), self.jigsaw_classifier.parameters()
+                                 , self.class_classifier.parameters()), "lr": base_lr}]
 
     def forward(self, x, lambda_val=0):
 
@@ -59,14 +59,14 @@ class AlexNet(nn.Module):
         x = self.classifier(x)
         return self.class_classifier(x), self.jigsaw_classifier(x)
 
-def alexnet(classes):
-    model = AlexNet(classes)
+def alexnet(classes,jigsaw_classes):
+    model = AlexNet(classes,jigsaw_classes)
     for m in model.modules():
         if isinstance(m, nn.Linear):
             nn.init.xavier_uniform_(m.weight, .1)
             nn.init.constant_(m.bias, 0.)
 
-    state_dict = torch.load(".JiGenProject/models/pretrained/alexnet_caffe.pth.tar")
+    state_dict = torch.load("./JiGenProject/models/pretrained/alexnet_caffe.pth.tar")
 
     del state_dict["classifier.fc8.weight"]
     del state_dict["classifier.fc8.bias"]

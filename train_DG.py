@@ -54,7 +54,7 @@ class Trainer:
         self.args = args
         self.device = device
         self.betaJigen = args.betaJigen
-        model = model_factory.get_network(args.network)(classes=args.n_classes)
+        model = model_factory.get_network(args.network)(classes=args.n_classes,jigsaw_classes=31)
         self.model = model.to(device)
 
         self.source_loader, self.val_loader = data_helper.get_train_dataloader(args)

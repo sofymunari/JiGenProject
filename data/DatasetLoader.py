@@ -65,7 +65,7 @@ def prepare_jigsaw_data(names,percent,path):
         #i want 3x3 grid
 
         piece_size_w = int(math.ceil(width / 3))
-	piece_size_h = int(math.ceil(height / 3))
+        piece_size_h = int(math.ceil(height / 3))
         width_steps = range(0, width, piece_size_w)
         height_steps = range(0, height, piece_size_h)
         boxes = ((i, j, i+piece_size_w, j+piece_size_h)
@@ -132,11 +132,12 @@ class Dataset(data.Dataset):
         else:
             index = index - len(self.names)
             #case of scrumbled image
-            return self.jigsaw_imgs[index], int(self.labels[index]),int(self.jigsaw_labels[index])
+            img = self._img_transformer(self.jigsaw_imgs[index])
+            return img, int(self.labels[index]),int(self.jigsaw_labels[index])
         
 
     def __len__(self):
-        return len(self.names)
+        return len(self.names)+len(self.jigsaw_names)
     
     
 
