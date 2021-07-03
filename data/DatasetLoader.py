@@ -9,6 +9,7 @@ from itertools import product,permutations
 from random import sample, random,randint
 from scipy.spatial import distance
 
+
 #jigsaw_permutations has the top scrumbles parts-> labels = position +1
 
 def calculate_possible_permutations():
