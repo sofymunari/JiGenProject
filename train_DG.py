@@ -114,12 +114,13 @@ class Trainer:
 
     def do_test(self, loader):
         class_correct = 0
+        jigsaw_correct = 0
         for it, (data, class_l, jigsaw_l) in enumerate(loader):
             data, class_l,jigsaw_l = data.to(self.device), class_l.to(self.device),jigsaw_l.to(self.device)
             class_logit,jigsaw_logit = self.model(data)
             _, jigsaw_pred = jigsaw_logit.max(dim=1)
             _, cls_pred = class_logit.max(dim=1)
-	    jigsaw_correct += torch.sum(jigsaw_pred == jigsaw_l.data)
+            jigsaw_correct += torch.sum(jigsaw_pred == jigsaw_l.data)
             class_correct += torch.sum(cls_pred == class_l.data)
         return class_correct,jigsaw_correct
 
