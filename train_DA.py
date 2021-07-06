@@ -39,16 +39,17 @@ def get_args():
     # tensorboard logger
     parser.add_argument("--tf_logger", type=bool, default=True, help="If true will save tensorboard compatible logs")
     parser.add_argument("--folder_name", default=None, help="Used by the logger to save logs")
-
+    parser.add_argument("--betaJigen", type=float, default=0.2, help="percentage of data used for jigsaw puzzle")
     return parser.parse_args()
 
 
 class Trainer:
     def __init__(self, args, device):
+        self.alpha_jigsaw_weight = 0.5
         self.args = args
         self.device = device
-
-        model = model_factory.get_network(args.network)(classes=args.n_classes)
+        self.betaJigen = args.betaJigen
+        model = model_factory.get_network(args.network)(classes=args.n_classes,jigsaw_classes=31)
         self.model = model.to(device)
 
         self.source_loader, self.val_loader = data_helper.get_train_dataloader(args)
@@ -66,17 +67,19 @@ class Trainer:
     def _do_epoch(self):
         criterion = nn.CrossEntropyLoss()
         self.model.train()
-        for it, (data, class_l) in enumerate(self.source_loader):
+        for it, (data, class_l, jigsaw_l) in enumerate(self.source_loader):
 
-            data, class_l = data.to(self.device), class_l.to(self.device)
+            data, class_l,jigsaw_l = data.to(self.device), class_l.to(self.device),jigsaw_l.to(self.device)
 
             self.optimizer.zero_grad()
 
-            class_logit = self.model(data)
-            class_loss = criterion(class_logit, class_l)
+            class_logit,jigsaw_logit = self.model(data) #label from model
+            jigsaw_loss = criterion(jigsaw_logit,jigsaw_l)
+            
+            class_loss = criterion(class_logit[jigsaw_l == 0], class_l[jigsaw_l == 0])
+            _, jigsaw_pred = jigsaw_logit.max(dim=1)
             _, cls_pred = class_logit.max(dim=1)
-
-            loss = class_loss
+            loss = class_loss + self.alpha_jigsaw_weight * jigsaw_loss
 
             loss.backward()
 
@@ -84,28 +87,33 @@ class Trainer:
 
 
             self.logger.log(it, len(self.source_loader),
-                            {"Class Loss ": class_loss.item()},
-                            {"Class Accuracy ": torch.sum(cls_pred == class_l.data).item()},
+                            {"Class Loss ": class_loss.item(), "Jigsaw Loss": jigsaw_loss.item()},
+                            {"Class Accuracy ": torch.sum(cls_pred == class_l.data).item(),"Jigsaw Accuracy ": torch.sum(jigsaw_pred == jigsaw_l.data).item()},
                             data.shape[0])
-            del loss, class_loss,class_logit
-
+            del loss, class_loss, jigsaw_loss, jigsaw_logit, class_logit
+        
         self.model.eval()
         with torch.no_grad():
             for phase, loader in self.test_loaders.items():
                 total = len(loader.dataset)
-                class_correct = self.do_test(loader)
+                class_correct,jigsaw_correct = self.do_test(loader)
                 class_acc = float(class_correct) / total
-                self.logger.log_test(phase, {"Classification Accuracy": class_acc})
+                jigsaw_acc = float(jigsaw_correct) / total
+                self.logger.log_test(phase, {"Classification Accuracy": class_acc,"Jigsaw Accuracy":jigsaw_acc})
                 self.results[phase][self.current_epoch] = class_acc
+
 
     def do_test(self, loader):
         class_correct = 0
-        for it, (data, class_l) in enumerate(loader):
-            data, class_l = data.to(self.device), class_l.to(self.device)
-            class_logit = self.model(data)
+        jigsaw_correct = 0
+        for it, (data, class_l, jigsaw_l) in enumerate(loader):
+            data, class_l,jigsaw_l = data.to(self.device), class_l.to(self.device),jigsaw_l.to(self.device)
+            class_logit,jigsaw_logit = self.model(data)
+            _, jigsaw_pred = jigsaw_logit.max(dim=1)
             _, cls_pred = class_logit.max(dim=1)
+            jigsaw_correct += torch.sum(jigsaw_pred == jigsaw_l.data)
             class_correct += torch.sum(cls_pred == class_l.data)
-        return class_correct
+        return class_correct,jigsaw_correct
 
     def do_training(self):
         self.logger = Logger(self.args, update_frequency=30)

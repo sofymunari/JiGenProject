@@ -4,7 +4,7 @@ from torchvision.models.resnet import BasicBlock, model_urls, Bottleneck
 
 
 class ResNet(nn.Module):
-    def __init__(self, block, layers, classes=100):
+    def __init__(self, block, layers, classes=100,jigsaw_classes=31):
         self.inplanes = 64
         super(ResNet, self).__init__()
         self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3,
@@ -18,6 +18,7 @@ class ResNet(nn.Module):
         self.layer4 = self._make_layer(block, 512, layers[3], stride=2)
         self.avgpool = nn.AvgPool2d(7, stride=1)
         self.class_classifier = nn.Linear(512 * block.expansion, classes)
+        self.jigsaw_classifier = nn.Linear(4096, jigsaw_classes)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -59,15 +60,15 @@ class ResNet(nn.Module):
 
         x = self.avgpool(x)
         x = x.view(x.size(0), -1)
-        return self.class_classifier(x)
+        return self.class_classifier(x),self.jigsaw_classifier(x)
 
 
-def resnet18(pretrained=True, **kwargs):
+def resnet18(classes ,jigsaw_classes,pretrained=True):
     """Constructs a ResNet-18 model.
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
-    model = ResNet(BasicBlock, [2, 2, 2, 2], **kwargs)
+    model = ResNet(BasicBlock, [2, 2, 2, 2],classes,jigsaw_classes)
     if pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['resnet18']), strict=False)
     return model

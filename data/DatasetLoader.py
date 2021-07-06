@@ -132,7 +132,7 @@ class Dataset(data.Dataset):
         else:
             index = index - len(self.names)
             #case of scrumbled image
-            img = self._img_transformer(self.jigsaw_imgs[index])
+            img = self._image_transformer(self.jigsaw_imgs[index])
             return img, int(self.labels[index]),int(self.jigsaw_labels[index])
         
 
@@ -158,6 +158,7 @@ class TestDataset(Dataset):
         else:
             index = index - len(self.names)
             #case of scrumbled image
-            return self.jigsaw_imgs[index], int(self.labels[index]),int(self.jigsaw_labels[index])
+            img = self._image_transformer(self.jigsaw_imgs[index])
+            return img, int(self.labels[index]),int(self.jigsaw_labels[index])
 
 
