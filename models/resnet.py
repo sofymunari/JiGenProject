@@ -18,7 +18,7 @@ class ResNet(nn.Module):
         self.layer4 = self._make_layer(block, 512, layers[3], stride=2)
         self.avgpool = nn.AvgPool2d(7, stride=1)
         self.class_classifier = nn.Linear(512 * block.expansion, classes)
-        self.jigsaw_classifier = nn.Linear(4096, jigsaw_classes)
+        self.jigsaw_classifier = nn.Linear(512 * block.expansion, jigsaw_classes)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
