@@ -6,6 +6,7 @@ from torch.nn import functional as F
 from data import data_helper
 from data.data_helper import available_datasets
 from models import model_factory
+from data.DatasetLoader import calculate_possible_permutations
 from optimizer.optimizer_helper import get_optim_and_scheduler
 from utils.Logger import Logger
 import numpy as np
@@ -134,6 +135,7 @@ class Trainer:
 
 def main():
     args = get_args()
+    calculate_possible_permutations()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     trainer = Trainer(args, device)
     trainer.do_training()
