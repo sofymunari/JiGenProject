@@ -62,13 +62,14 @@ class Trainer:
         print("Dataset size: train %d, val %d, test %d" % (len(self.source_loader.dataset), len(self.val_loader.dataset), len(self.target_loader.dataset)))
 
         self.optimizer, self.scheduler = get_optim_and_scheduler(model, args.epochs, args.learning_rate, args.train_all)
-
+        #get the index of target in order to have it later for training
+        self.target_index = args.source.index(args.target)
         self.n_classes = args.n_classes
 
     def _do_epoch(self):
         criterion = nn.CrossEntropyLoss()
         self.model.train()
-        for it, (data, class_l, jigsaw_l) in enumerate(self.source_loader):
+        for it, ((data, class_l, jigsaw_l),domainId) in enumerate(self.source_loader):
 
             data, class_l,jigsaw_l = data.to(self.device), class_l.to(self.device),jigsaw_l.to(self.device)
 
@@ -76,7 +77,7 @@ class Trainer:
 
             class_logit,jigsaw_logit = self.model(data) #label from model
             jigsaw_loss = criterion(jigsaw_logit,jigsaw_l)
-            
+            #traing classifier only on images not scrumbled and not in target!
             class_loss = criterion(class_logit[jigsaw_l == 0], class_l[jigsaw_l == 0])
             _, jigsaw_pred = jigsaw_logit.max(dim=1)
             _, cls_pred = class_logit.max(dim=1)
