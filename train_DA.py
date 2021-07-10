@@ -75,7 +75,7 @@ class Trainer:
     def _do_epoch(self):
         criterion = nn.CrossEntropyLoss()
         self.model.train()
-        for it, ((data, class_l, jigsaw_l), (data_target, jigsaw_l_target)) in enumerate(zip(self.source_loader, itertools.cycle(self.targetAsSource_loader))):
+        for it, ((data, class_l, jigsaw_l), (data_target, class_l_target, jigsaw_l_target)) in enumerate(zip(self.source_loader, itertools.cycle(self.targetAsSource_loader))):
         #for it,  in enumerate(self.source_loader):
 
             data, class_l,jigsaw_l,data_target,jigsaw_l_target = data.to(self.device), class_l.to(self.device),jigsaw_l.to(self.device),data_target.to(self.device),jigsaw_l_target.to(self.device)
