@@ -11,6 +11,18 @@ pacs_datasets = ["art_painting", "cartoon", "photo", "sketch"]
 
 available_datasets = pacs_datasets
 
+def get_trainTargetAsSource_dataloader(args):
+    #used to create dataset of target images ready for jigsaw task ( only in training da!!)
+    names, labels = _dataset_info(join(dirname(__file__), 'txt_lists', args.target+'.txt'))
+    img_transformer = get_train_transformers(args)
+    train_dataset = Dataset(names, labels, args.path_dataset, img_transformer=img_transformer,betaJigen = args.betaJigen)
+    #val_dataset = TestDataset(names, labels,args.path_dataset, img_transformer=img_tr,betaJigen = args.betaJigen)
+    dataset = ConcatDataset([train_dataset])
+    loader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=4, pin_memory=True, drop_last=True)
+
+    return loader
+    
+
 def get_train_dataloader(args):
 
     dataset_list = args.source

@@ -10,6 +10,7 @@ from data.DatasetLoader import calculate_possible_permutations
 from optimizer.optimizer_helper import get_optim_and_scheduler
 from utils.Logger import Logger
 import numpy as np
+import itertools
 
 
 def get_args():
@@ -47,6 +48,7 @@ def get_args():
 class Trainer:
     def __init__(self, args, device):
         self.alpha_jigsaw_weight = 0.5
+        self.alpha_jigsaw_weight_target = 0.5
         self.args = args
         self.device = device
         self.betaJigen = args.betaJigen
@@ -55,11 +57,12 @@ class Trainer:
 
         self.source_loader, self.val_loader = data_helper.get_train_dataloader(args)
         self.target_loader = data_helper.get_val_dataloader(args)
+        self.targetAsSource_loader = data_helper.get_trainTargetAsSource_dataloader(args);
 
 
         self.test_loaders = {"val": self.val_loader, "test": self.target_loader}
         self.len_dataloader = len(self.source_loader)
-        print("Dataset size: train %d, val %d, test %d" % (len(self.source_loader.dataset), len(self.val_loader.dataset), len(self.target_loader.dataset)))
+        print("Dataset size: train %d, val %d, test %d" % (len(self.source_loader.dataset)+len(self.targetAsSource_loader), len(self.val_loader.dataset)+len(self.valTargetAsSource_loader), len(self.target_loader.dataset)))
 
         self.optimizer, self.scheduler = get_optim_and_scheduler(model, args.epochs, args.learning_rate, args.train_all)
         #get the index of target in order to have it later for training
@@ -69,19 +72,22 @@ class Trainer:
     def _do_epoch(self):
         criterion = nn.CrossEntropyLoss()
         self.model.train()
-        for it, ((data, class_l, jigsaw_l),domainId) in enumerate(self.source_loader):
+        for it, ((data, class_l, jigsaw_l), (data_target, class_l_no, jigsaw_l_target)) in enumerate(zip(self.source_loader, itertools.cycle(self.targetAsSource_loader))):
+        #for it,  in enumerate(self.source_loader):
 
-            data, class_l,jigsaw_l = data.to(self.device), class_l.to(self.device),jigsaw_l.to(self.device)
+            data, class_l,jigsaw_l,data_target,jigsaw_l_target = data.to(self.device), class_l.to(self.device),jigsaw_l.to(self.device),data_target.to(self.device),jigsaw_l_target.to(self.device)
 
             self.optimizer.zero_grad()
 
             class_logit,jigsaw_logit = self.model(data) #label from model
+            class_logit_no,jigsaw_logit_target = self.model(data_target)
             jigsaw_loss = criterion(jigsaw_logit,jigsaw_l)
+            jigsaw_loss_target = criterion(jigsaw_logit_target,jigsaw_l_target)
             #traing classifier only on images not scrumbled and not in target!
             class_loss = criterion(class_logit[jigsaw_l == 0], class_l[jigsaw_l == 0])
             _, jigsaw_pred = jigsaw_logit.max(dim=1)
             _, cls_pred = class_logit.max(dim=1)
-            loss = class_loss + self.alpha_jigsaw_weight * jigsaw_loss
+            loss = class_loss + self.alpha_jigsaw_weight * jigsaw_loss+ self.alpha_jigsaw_weight_target * jigsaw_loss_target
 
             loss.backward()
 
@@ -92,7 +98,7 @@ class Trainer:
                             {"Class Loss ": class_loss.item(), "Jigsaw Loss": jigsaw_loss.item()},
                             {"Class Accuracy ": torch.sum(cls_pred == class_l.data).item(),"Jigsaw Accuracy ": torch.sum(jigsaw_pred == jigsaw_l.data).item()},
                             data.shape[0])
-            del loss, class_loss, jigsaw_loss, jigsaw_logit, class_logit
+            del loss, class_loss, jigsaw_loss,jigsaw_loss_target, jigsaw_logit, class_logit,class_logit_no,jigsaw_logit_target
         
         self.model.eval()
         with torch.no_grad():
