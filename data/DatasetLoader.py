@@ -48,6 +48,37 @@ def get_random_subset(names, labels, percent):
     labels_train = [v for k, v in enumerate(labels) if k not in random_index]
     return name_train, name_val, labels_train, labels_val
 
+def prepare_rotation_data(names,percent,path):
+    samples = len(names)
+    amount = int(samples*percent)
+    random_index = sample(range(samples),amount)
+    name_jigsaw = [names[k] for k in random_index]
+    imgs_jigsaw = []
+    labels_jigsaw = []
+    for index in random_index:
+        framename = path +'/'+names[index]
+        img = Image.open(framename).convert('RGB')
+        #get random rotation to apply
+        #0-> no rotation
+        #1-> 90 degrees rotation
+        #2-> 180 degrees rotation
+        #3-> 270 degrees rotation
+        
+        rotation = random.randint(1,3)
+        if rotation == 1:
+            theRotation = Image.ROTATE_90
+        elif rotation == 2:
+            theRotation = Image.ROTATE_180 
+        elif rotation == 3:
+            theRotation = Image.ROTATE_270
+        print (rotation)
+        labels_jigsaw.append(rotation)
+        rotatedImage  = img.transpose(theRotation)
+        imgs_jigsaw.append(rotatedImage)
+    return name_jigsaw,imgs_jigsaw,labels_jigsaw
+        
+    
+
 def prepare_jigsaw_data(names,percent,path):
     samples = len(names)
     amount = int(samples*percent)
@@ -60,7 +91,7 @@ def prepare_jigsaw_data(names,percent,path):
     for index in random_index:
         framename = path + '/' + names[index]
         img = Image.open(framename).convert('RGB')
-        #transform????
+        
         width, height = img.size
         #i want 3x3 grid
 
@@ -110,15 +141,18 @@ def get_split_dataset_info(txt_list, val_percentage):
 
 
 class Dataset(data.Dataset):
-    def __init__(self, names, labels, path_dataset,img_transformer=None,betaJigen=0.2):
+    def __init__(self, names, labels, path_dataset,img_transformer=None,betaJigen=0.2,rotation=False):
         self.data_path = path_dataset
         self.names = names
         self.labels = labels
         self._image_transformer = img_transformer
         self.betaJigen = betaJigen
         #let's take beta part of training images and use them for jigsaw puzzle
-        self.jigsaw_names,self.jigsaw_imgs,self.jigsaw_permutations,self.jigsaw_labels = prepare_jigsaw_data(names,betaJigen,self.data_path);
-        
+        if rotation == False:
+            self.jigsaw_names,self.jigsaw_imgs,self.jigsaw_permutations,self.jigsaw_labels = prepare_jigsaw_data(names,betaJigen,self.data_path);
+        else:
+            #no jigsaw but we keep those names to avoid using more variables
+            self.jigsaw_names,self.jigsaw_imgs,self.jigsaw_labels = prepare_rotation_data(names,betaJigen,self.data_path);
         
 
     def __getitem__(self, index):

@@ -44,7 +44,7 @@ def get_args():
     
     #batch of data used for jigsaw puzzle
     parser.add_argument("--betaJigen", type=float, default=0.2, help="percentage of data used for jigsaw puzzle")
-   
+    parser.add_argument("--rotation", type=bool, default= False, help="are you running Rotation classfication self supervised task?" )
     return parser.parse_args()
 
 
@@ -54,7 +54,11 @@ class Trainer:
         self.args = args
         self.device = device
         self.betaJigen = args.betaJigen
-        model = model_factory.get_network(args.network)(classes=args.n_classes,jigsaw_classes=31)
+        
+        if args.rotation== True:
+            model = model_factory.get_network(args.network)(classes=args.n_classes,jigsaw_classes=4)
+        else:
+            model = model_factory.get_network(args.network)(classes=args.n_classes,jigsaw_classes=31)
         self.model = model.to(device)
 
         self.source_loader, self.val_loader = data_helper.get_train_dataloader(args)
