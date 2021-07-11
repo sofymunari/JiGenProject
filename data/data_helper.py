@@ -15,7 +15,7 @@ def get_trainTargetAsSource_dataloader(args):
     #used to create dataset of target images ready for jigsaw task ( only in training da!!)
     names, labels = _dataset_info(join(dirname(__file__), 'txt_lists', args.target+'.txt'))
     img_transformer = get_train_transformers(args)
-    train_dataset = Dataset(names, labels, args.path_dataset, img_transformer=img_transformer,betaJigen = args.betaJigen)
+    train_dataset = Dataset(names, labels, args.path_dataset, img_transformer=img_transformer,betaJigen = args.betaJigen,rotation = args.rotation,oddOneOut = args.oddOneOut)
     #val_dataset = TestDataset(names, labels,args.path_dataset, img_transformer=img_tr,betaJigen = args.betaJigen)
     dataset = ConcatDataset([train_dataset])
     loader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=4, pin_memory=True, drop_last=True)
@@ -36,10 +36,10 @@ def get_train_dataloader(args):
     for dname in dataset_list:
         name_train, name_val, labels_train, labels_val = get_split_dataset_info(join(dirname(__file__), 'txt_lists', dname+'.txt'), args.val_size)
         #batch of cropped and shuffle images for train args.betJigen
-        train_dataset = Dataset(name_train, labels_train, args.path_dataset, img_transformer=img_transformer,betaJigen = args.betaJigen,rotation = args.rotation)
+        train_dataset = Dataset(name_train, labels_train, args.path_dataset, img_transformer=img_transformer,betaJigen = args.betaJigen,rotation = args.rotation,oddOneOut = args.oddOneOut)
         datasets.append(train_dataset)
 
-        val_dataset = TestDataset(name_val, labels_val, args.path_dataset, img_transformer=val_trasformer,betaJigen = args.betaJigen,rotation = args.rotation)
+        val_dataset = TestDataset(name_val, labels_val, args.path_dataset, img_transformer=val_trasformer,betaJigen = args.betaJigen,rotation = args.rotation,oddOneOut = args.oddOneOut)
         val_datasets.append(val_dataset)
 
     dataset = ConcatDataset(datasets)
@@ -56,7 +56,7 @@ def get_val_dataloader(args):
     names, labels = _dataset_info(join(dirname(__file__), 'txt_lists', args.target+'.txt'))
     img_tr = get_val_transformer(args)
 
-    val_dataset = TestDataset(names, labels,args.path_dataset, img_transformer=img_tr,betaJigen = args.betaJigen,rotation = args.rotation)
+    val_dataset = TestDataset(names, labels,args.path_dataset, img_transformer=img_tr,betaJigen = args.betaJigen,rotation = args.rotation,oddOneOut = args.oddOneOut)
     dataset = ConcatDataset([val_dataset])
     loader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=False, num_workers=4, pin_memory=True, drop_last=False)
 
