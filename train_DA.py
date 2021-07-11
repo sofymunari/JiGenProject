@@ -43,6 +43,7 @@ def get_args():
     parser.add_argument("--tf_logger", type=bool, default=True, help="If true will save tensorboard compatible logs")
     parser.add_argument("--folder_name", default=None, help="Used by the logger to save logs")
     parser.add_argument("--betaJigen", type=float, default=0.2, help="percentage of data used for jigsaw puzzle")
+    parser.add_argument("--rotation", type=bool, default=False, help="implementing rotation as self supervised task")
     return parser.parse_args()
 
 def entropy_loss(x):
@@ -56,7 +57,10 @@ class Trainer:
         self.args = args
         self.device = device
         self.betaJigen = args.betaJigen
-        model = model_factory.get_network(args.network)(classes=args.n_classes,jigsaw_classes=31)
+        if args.rotation == False:
+            model = model_factory.get_network(args.network)(classes=args.n_classes,jigsaw_classes=31)
+        else:
+            model = model_factory.get_network(args.network)(classes=args.n_classes,jigsaw_classes=4)
         self.model = model.to(device)
 
         self.source_loader, self.val_loader = data_helper.get_train_dataloader(args)
