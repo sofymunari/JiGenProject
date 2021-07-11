@@ -76,9 +76,17 @@ def prepare_oddOneOut_data(names,percent,path):
         random_chosen_img_odd = randint(0,samples-1)
         framename_chosen = path +'/'+names[random_chosen_img_odd]
         img_odd = Image.open(framename_chosen).convert('RGB')
-        
+        w_odd, h_odd = img_odd.size
+        #i want 3x3 grid
+
+        piece_size_w_odd = int(math.ceil(w_odd / 3))
+        piece_size_h_odd = int(math.ceil(h_odd / 3))
+        width_steps_odd = range(0, w_odd, piece_size_w_odd)
+        height_steps_odd = range(0, h_odd, piece_size_h_odd)
+        boxes_odd = ((i_odd, j_odd, i_odd+piece_size_w_odd, j_odd+piece_size_h_odd)
+                 for i_odd, j_odd in product(width_steps_odd, height_steps_odd))
         random_piece_of_img = randint(0,8)
-        parts_to_insert = [img_odd.crop(box) for box in boxes]
+        parts_to_insert = [img_odd.crop(box_odd) for box_odd in boxes_odd]
         the_part_to_insert = parts_to_insert[random_piece_of_img]
         pi = 0
         img_recomposed = Image.new('RGB',img.size)
