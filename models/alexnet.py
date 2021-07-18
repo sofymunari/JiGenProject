@@ -8,7 +8,7 @@ from torch import nn as nn
 
 
 class AlexNet(nn.Module):
-    def __init__(self,n_classes=100, jigsaw_classes=31 , dropout=True):
+    def __init__(self,n_classes=100, jigsaw_classes=31,odd_classes = 10,rotation_classes=4 , dropout=True):
         super(AlexNet, self).__init__()
         print("Using  AlexNet")
         self.features = nn.Sequential(OrderedDict([
@@ -38,6 +38,8 @@ class AlexNet(nn.Module):
 
         self.class_classifier = nn.Linear(4096, n_classes)
         self.jigsaw_classifier = nn.Linear(4096, jigsaw_classes)
+        self.odd_classifier = nn.Linear(4096, odd_classes)
+        self.rotation_classifier = nn.Linear(4096, rotation_classes)
 
     def get_params(self, base_lr):
         return [{"params": self.features.parameters(), "lr": 0.},
@@ -57,10 +59,10 @@ class AlexNet(nn.Module):
         x = self.features(x*57.6)
         x = x.view(x.size(0), -1)
         x = self.classifier(x)
-        return self.class_classifier(x), self.jigsaw_classifier(x)
+        return self.class_classifier(x), self.jigsaw_classifier(x),self.odd_classifier(x),self.rotation_classifier(x)
 
-def alexnet(classes,jigsaw_classes):
-    model = AlexNet(classes,jigsaw_classes)
+def alexnet(classes,jigsaw_classes,odd_classes,rotation_classes):
+    model = AlexNet(classes,jigsaw_classes,odd_classes,rotation_classes)
     for m in model.modules():
         if isinstance(m, nn.Linear):
             nn.init.xavier_uniform_(m.weight, .1)

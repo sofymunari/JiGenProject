@@ -55,6 +55,7 @@ def prepare_oddOneOut_data(names,percent,path):
     name_jigsaw = [names[k] for k in random_index]
     imgs_jigsaw = []
     labels_jigsaw = []
+    self_sup_task = []
     for index in random_index:
         framename = path +'/'+names[index]
         img = Image.open(framename).convert('RGB')
@@ -98,7 +99,8 @@ def prepare_oddOneOut_data(names,percent,path):
                     img_recomposed.paste(the_part_to_insert,(i,j))
                 pi=pi+1
         imgs_jigsaw.append(img_recomposed)
-    return name_jigsaw,imgs_jigsaw,labels_jigsaw
+        self_sup_task.append('odd')
+    return name_jigsaw,imgs_jigsaw,labels_jigsaw,self_sup_task
         
         
     
@@ -111,6 +113,7 @@ def prepare_rotation_data(names,percent,path):
     name_jigsaw = [names[k] for k in random_index]
     imgs_jigsaw = []
     labels_jigsaw = []
+    self_sup_task = []
     for index in random_index:
         framename = path +'/'+names[index]
         img = Image.open(framename).convert('RGB')
@@ -130,7 +133,8 @@ def prepare_rotation_data(names,percent,path):
         labels_jigsaw.append(rotation)
         rotatedImage  = img.transpose(theRotation)
         imgs_jigsaw.append(rotatedImage)
-    return name_jigsaw,imgs_jigsaw,labels_jigsaw
+        self_sup_task.append('rotation')
+    return name_jigsaw,imgs_jigsaw,labels_jigsaw,self_sup_task
         
     
 
@@ -142,6 +146,7 @@ def prepare_jigsaw_data(names,percent,path):
     imgs_jigsaw = []
     labels_jigsaw = []
     permutations_jigsaw= []
+    self_sup_task = []
     #we got the data
     for index in random_index:
         framename = path + '/' + names[index]
@@ -172,8 +177,9 @@ def prepare_jigsaw_data(names,percent,path):
                 pi=pi+1
         #so now we have the image recomposed the vector of permutations and we calculate the label
         imgs_jigsaw.append(img_recomposed)
+        self_sup_task.apped('jigsaw')
         
-    return name_jigsaw,imgs_jigsaw,permutations_jigsaw,labels_jigsaw
+    return name_jigsaw,imgs_jigsaw,permutations_jigsaw,labels_jigsaw,self_sup_task
 
 
 def _dataset_info(txt_labels):
@@ -203,13 +209,23 @@ class Dataset(data.Dataset):
         self._image_transformer = img_transformer
         self.betaJigen = betaJigen
         #let's take beta part of training images and use them for jigsaw puzzle
+        if rotation == True and oddOneOut == True:
+             self.rotation_names,self.rotation_imgs,self.rotation_labels,self.self_sup_task_rotation = prepare_rotation_data(names,betaJigen,self.data_path)
+             self.odd_names,self.odd_imgs,self.odd_labels,self.self_sup_task_odd = prepare_oddOneOut_data(names,betaJigen,self.data_path);
+             self.jigsaw_names,self.jigsaw_imgs,self.jigsaw_permutations,self.jigsaw_labels,self.self_sup_task_jigsaw = prepare_jigsaw_data(names,betaJigen,self.data_path)
         if rotation == True:
             #no jigsaw but we keep those names to avoid using more variables
-            self.jigsaw_names,self.jigsaw_imgs,self.jigsaw_labels = prepare_rotation_data(names,betaJigen,self.data_path)
+            self.rotation_names,self.rotation_imgs,self.rotation_labels,self.self_sup_task_rotation = prepare_rotation_data(names,betaJigen,self.data_path)
+            self.jigsaw_names,self.jigsaw_imgs,self.jigsaw_permutations,self.jigsaw_labels,self.self_sup_task_jigsaw = prepare_jigsaw_data(names,betaJigen,self.data_path)
         elif oddOneOut == True:
-            self.jigsaw_names,self.jigsaw_imgs,self.jigsaw_labels = prepare_oddOneOut_data(names,betaJigen,self.data_path);
+            self.odd_names,self.odd_imgs,self.odd_labels,self.self_sup_task_odd = prepare_oddOneOut_data(names,betaJigen,self.data_path)
+            self.jigsaw_names,self.jigsaw_imgs,self.jigsaw_permutations,self.jigsaw_labels,self.self_sup_task_jigsaw = prepare_jigsaw_data(names,betaJigen,self.data_path)
         else:
-            self.jigsaw_names,self.jigsaw_imgs,self.jigsaw_permutations,self.jigsaw_labels = prepare_jigsaw_data(names,betaJigen,self.data_path)
+            self.jigsaw_names,self.jigsaw_imgs,self.jigsaw_permutations,self.jigsaw_labels,self.self_sup_task_jigsaw = prepare_jigsaw_data(names,betaJigen,self.data_path)
+        self.jigsaw_names.append(self.odd_names).append(self.rotation_names)
+        self.jigsaw_imgs.append(self.odd_names).append(self.rotation_names)
+        self.jigsaw_labels.append(self.odd_labels).append(self.rotation_labels)
+        self.self_sup_task_jigsaw.append(self.self_sup_task_odd).append(self.self_sup_task_rotation)
             
         
 
@@ -220,12 +236,12 @@ class Dataset(data.Dataset):
             img = Image.open(framename).convert('RGB')
             img = self._image_transformer(img)
             #case of not scrumbled image
-            return img, int(self.labels[index]), int (0)
+            return img, int(self.labels[index]), int (0),'class'
         else:
             index = index - len(self.names)
             #case of scrumbled image
             img = self._image_transformer(self.jigsaw_imgs[index])
-            return img, int(self.labels[index]),int(self.jigsaw_labels[index])
+            return img, int(self.labels[index]),int(self.jigsaw_labels[index]),self.self_sup_task_jigsaw[index]
         
 
     def __len__(self):
@@ -248,11 +264,11 @@ class TestDataset(Dataset):
             img = Image.open(framename).convert('RGB')
             img = self._image_transformer(img)
             #case of not scrumbled image
-            return img, int(self.labels[index]), int (0)
+            return img, int(self.labels[index]), int (0),'class'
         else:
             index = index - len(self.names)
             #case of scrumbled image
             img = self._image_transformer(self.jigsaw_imgs[index])
-            return img, int(self.labels[index]),int(self.jigsaw_labels[index])
+            return img, int(self.labels[index]),int(self.jigsaw_labels[index]),self.self_sup_task_jigsaw[index]
 
 
